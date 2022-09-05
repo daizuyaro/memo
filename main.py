@@ -29,6 +29,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtCore import *
 from PIL import Image
 from tkinter import messagebox
+import test
 
 # Image scale when displaying using OpenCV.
 DISPLAY_RESIZE_FACTOR = 1
@@ -41,7 +42,7 @@ canvas_height = 310
 
 ############ qでカメラからの読み取りを失敗したときの処理から
 
-def main(q, r, t):
+def main(q, r):
     # camera initialization
     st.initialize()
     st_system = st.create_system()
@@ -52,20 +53,19 @@ def main(q, r, t):
     remote_nodemap = st_device.remote_port.nodemap # impossible to pick it, so combined into the main program
 
     while st_datastream.is_grabbing: # A while loop for acquiring data and check status
-        #start = time.time()
+
+        start = time.time()
+
         data = camera.loop(st_datastream) # data from the camera.py
 
-        if data is not "None":
-
+        if len(data) > 1:
             q.put(data) # To show the image on GUI
             sim_fact = judge.judgement(data) # template matching and similarity factor
-            #print(time.time() - start)
 
             if sim_fact > 0.9:
                 ok = "OK"
                 r.put(ok) # for image
-
-                t.put("None") ##########
+                #print(time.time() - start)
 
             else: #
                 ng = "NG"
@@ -77,13 +77,14 @@ def main(q, r, t):
                 messagebox.showerror('NG', '落丁検知')
                 trigger.edit_enumeration(remote_nodemap, PIXEL_FORMAT, 0)
 
-        else:
-            t.put("None")
+        else: # lem(data) < 0
+            none = "None"
+            r.put(none)
 
 # convert the image from nupy to image for the TK
 def converter(q, s):
     while True:
-        image_tk = image_convert.converter(q.get())
+        image_tk = image_convert.converter_canvas(q.get())
         s.put(image_tk)
 
 class Mainloop(tk.Frame):
@@ -119,33 +120,58 @@ class Mainloop(tk.Frame):
         self.text1= tk.StringVar()
         self.text1.set("OK")
         self.text_pos = tk.Label(textvariable=self.text1)
-        self.text_pos.place(x=5, y=380)
+        self.text_pos.place(x=5, y=350)
 
         self.text2= tk.StringVar()
         self.text2.set("NG")
         self.text_pos = tk.Label(textvariable=self.text2)
-        self.text_pos.place(x=5, y=420)
+        self.text_pos.place(x=5, y=390)
 
         self.text3= tk.StringVar()
         self.text3.set("失敗")
         self.text_pos = tk.Label(textvariable=self.text3)
-        self.text_pos.place(x=5, y=460)
+        self.text_pos.place(x=5, y=430)
 
         self.text4= tk.StringVar()
         self.text4.set("合計")
         self.text_pos = tk.Label(textvariable=self.text4)
-        self.text_pos.place(x=5, y=500)
+        self.text_pos.place(x=5, y=470)
 
         self.text5= tk.StringVar()
         self.text5.set("システム")
         self.text_pos = tk.Label(textvariable=self.text5)
-        self.text_pos.place(x=5, y=540)
+        self.text_pos.place(x=5, y=510)
 
         self.thread()
 
-    #@pyqtSlot(str)
-    def canvas_update(self, r, s, t):
+    def ui_update(self, r):
+        while True:
+            self.r = r.get()
 
+            self.total += 1
+            self.text4.set("合計" + " " + str(self.total))
+
+            if not "None" in self.r:
+                if self.start_x is not 0:
+                    if self.r == "OK":
+                        self.increment_OK += 1
+                        self.text1.set("OK" + " " + str(self.increment_OK))
+                    else:
+                        self.increment_NG += 1
+                        self.text2.set("NG" + " " + str(self.increment_NG))
+                else:
+                    if self.r == "OK":
+                        self.increment_OK += 1
+                        self.text1.set("OK" + " " + str(self.increment_OK))
+                    else:
+                        self.increment_NG += 1
+                        self.text2.set("NG" + " " + str(self.increment_NG))
+            else:
+                self.failure += 1
+                self.text3.set("失敗" + " " + str(self.failure))
+
+    #@pyqtSlot(str)
+    def canvas_update(self, s):
         # Canvasウィジェットを配置し、各種イベントを設定
         #self.canvas1.pack() # disable due to layout of the canvas1 is shifted
         self.canvas1.bind("<ButtonPress-1>", self.start_point_get)
@@ -154,49 +180,23 @@ class Mainloop(tk.Frame):
 
         while True:
             self.s = s.get()
-            self.t = t.get()
-
-            print(self.t)
-
-            self.total += 1
-            self.text4.set("合計" + " " + str(self.total))
-
             self.image_tk = ImageTk.PhotoImage(self.s)
 
-            if self.t is not "None":
-                if self.start_x is not 0:
+            if self.start_x is not 0:
+                # 画像の描画
+                self.canvas1.create_image(
+                    #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
+                    #self.canvas_height / 2,
+                    0, 0, image=self.image_tk, anchor='nw')
 
-                    # 画像の描画
-                    self.canvas1.create_image(
-                        #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
-                        #self.canvas_height / 2,
-                        0, 0, image=self.image_tk, anchor='nw')
+                self.canvas1.create_rectangle(self.start_x, self.start_y, self.end_x, self.end_y, outline='white')
 
-                    self.canvas1.create_rectangle(self.start_x, self.start_y, self.end_x, self.end_y, outline='white')
-
-                    if r.get() == "OK":
-                        self.increment_OK += 1
-                        self.text1.set("OK" + " " + str(self.increment_OK))
-                    else:
-                        self.increment_NG += 1
-                        self.text2.set("NG" + " " + str(self.increment_NG))
-                else:
-                    # show the image
-                    self.canvas1.create_image(
-                        #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
-                        #self.canvas_height / 2,
-                        0, 0, image=self.image_tk, anchor='nw')
-
-                    if r.get() == "OK":
-                        self.increment_OK += 1
-                        self.text1.set("OK" + " " + str(self.increment_OK))
-                    else:
-                        self.increment_NG += 1
-                        self.text2.set("NG" + " " + str(self.increment_NG))
             else:
-                print("else")
-                self.failure += 1
-                self.text3.set("失敗" + " " + str(self.failure))
+                # show the image
+                self.canvas1.create_image(
+                    #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
+                    #self.canvas_height / 2,
+                    0, 0, image=self.image_tk, anchor='nw')
 
     # ドラッグ開始した時のイベント - - - - - - - - - - - - - - - - - - - - - - - - - -
     def start_point_get(self, event):
@@ -228,7 +228,6 @@ class Mainloop(tk.Frame):
 
         # "rect1"タグの画像を再描画
         self.canvas1.coords("rect1", start_x, start_y, end_x, end_y)
-
     # ドラッグを離したときのイベント - - - - - - - - - - - - - - - - - - - - - - - - - -
     def release_action(self, event):
 
@@ -247,7 +246,8 @@ class Mainloop(tk.Frame):
                 #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
                 #self.canvas_height / 2,
                 0, 0, image=self.image_tk, anchor='nw')
-            # show white line on canvas1
+
+            #show white line on canvas1
             self.canvas1.create_rectangle(self.start_x, self.start_y, self.end_x, self.end_y, outline='white')
 
             # show image on canvas2
@@ -264,23 +264,25 @@ class Mainloop(tk.Frame):
                 #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
                 #self.canvas_height / 2,
                 0, 0, image=self.image_tk, anchor='nw')
+            #self.canvas1.delete("rect1")  # すでに"rect1"タグの図形があれば削除
             pass
 
     def canvas_clipper(self, data):
         out_image = np.array(self.s, dtype=np.uint8)
 
         # サンプル1の切り出し、保存
-        img = out_image[self.start_x : self.end_x, self.start_y : self.end_y]
+        img = out_image[self.start_y : self.end_y, self.start_x : self.end_x]
         nparr = np.ascontiguousarray(img, np.uint8) # convert the data into numpy
-        image_tk = image_convert.converter(nparr)
+        image_tk = image_convert.converter_clipper(nparr)
         image_tk = ImageTk.PhotoImage(image_tk)
 
         return image_tk
 
     def thread(self):
-        thread1 = threading.Thread(target=self.canvas_update, args=(r, s, t,))
+        thread1 = threading.Thread(target=self.ui_update, args=(r, ))
+        thread2 = threading.Thread(target=self.canvas_update, args=(s, ))
         thread1.start()
-
+        thread2.start()
 
 if __name__ == "__main__":
 
@@ -288,12 +290,11 @@ if __name__ == "__main__":
     q = Queue()
     r = Queue()
     s = Queue()
-    t = Queue()
 
-    with pool.Pool(processes=4) as p:
+    with pool.Pool(processes=2) as p:
 
         #multiprocessing
-        p0 = p.Process(target=main, args=(q, r, t, ), daemon=True)
+        p0 = p.Process(target=main, args=(q, r, ), daemon=True)
         p1 = p.Process(target=converter, args=(q, s, ), daemon=True)
 
         p0.start()
@@ -303,7 +304,7 @@ if __name__ == "__main__":
 
     root = tk.Tk()
     root.title("Hello World")
-    root.geometry("1x1")
+    root.geometry("1060x550")
     app = Mainloop(r, master = root)
     app.mainloop()
 
