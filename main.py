@@ -37,8 +37,10 @@ DISPLAY_RESIZE_FACTOR = 1
 i = 999999999999999
 PIXEL_FORMAT = "UserOutputValue0"
 RESIZE_RETIO = 1 # 縮小倍率の規定
-canvas_width = 500
-canvas_height = 310
+canvas_width1 = 942 #3mm in margin
+canvas_height1 = 707 #3mm in margin
+canvas_width2 = 500
+canvas_height2 = 310
 
 ############ qでカメラからの読み取りを失敗したときの処理から
 
@@ -65,7 +67,7 @@ def main(q, r):
             if sim_fact > 0.9:
                 ok = "OK"
                 r.put(ok) # for image
-                #print(time.time() - start)
+                print(time.time() - start)
 
             else: #
                 ng = "NG"
@@ -101,16 +103,16 @@ class Mainloop(tk.Frame):
 
         #フレームを入れ子で作成。「frame」の中に「canvas」を作成
         frame1 = tk.Frame(root, )
-        frame1.place(x=10, y=10, width=canvas_width, height=canvas_height)
+        frame1.place(x=10, y=10, width=canvas_width1, height=canvas_height1)
         ### キャンバス作成・配置
-        self.canvas1 = tk.Canvas(frame1, width=canvas_width, height=canvas_height, background="#fff")
+        self.canvas1 = tk.Canvas(frame1, width=canvas_width1, height=canvas_height1, background="#fff")
         self.canvas1.place(x=5, y=5)
 
         #フレームを入れ子で作成。「frame」の中に「canvas」を作成
         frame2 = tk.Frame(root, )
-        frame2.place(x=535, y=10, width=canvas_width, height=canvas_height)
+        frame2.place(x=970, y=407, width=canvas_width2, height=canvas_height2)
         ### キャンバス作成・配置
-        self.canvas2 = tk.Canvas(frame2, width=canvas_width, height=canvas_height, background="#fff")
+        self.canvas2 = tk.Canvas(frame2, width=canvas_width2, height=canvas_height2, background="#fff")
         self.canvas2.place(x=5, y=5)
 
         #button = tk.Button(text='ボタン', width=30, command=self.thread)
@@ -120,27 +122,27 @@ class Mainloop(tk.Frame):
         self.text1= tk.StringVar()
         self.text1.set("OK")
         self.text_pos = tk.Label(textvariable=self.text1)
-        self.text_pos.place(x=5, y=350)
+        self.text_pos.place(x=970, y=10)
 
         self.text2= tk.StringVar()
         self.text2.set("NG")
         self.text_pos = tk.Label(textvariable=self.text2)
-        self.text_pos.place(x=5, y=390)
+        self.text_pos.place(x=970, y=50)
 
         self.text3= tk.StringVar()
         self.text3.set("失敗")
         self.text_pos = tk.Label(textvariable=self.text3)
-        self.text_pos.place(x=5, y=430)
+        self.text_pos.place(x=970, y=90)
 
         self.text4= tk.StringVar()
         self.text4.set("合計")
         self.text_pos = tk.Label(textvariable=self.text4)
-        self.text_pos.place(x=5, y=470)
+        self.text_pos.place(x=970, y=130)
 
         self.text5= tk.StringVar()
         self.text5.set("システム")
         self.text_pos = tk.Label(textvariable=self.text5)
-        self.text_pos.place(x=5, y=510)
+        self.text_pos.place(x=970, y=170)
 
         self.thread()
 
@@ -220,11 +222,11 @@ class Mainloop(tk.Frame):
         if event.x < 0:
             end_x = 0
         else:
-            end_x = min(canvas_width, event.x)
+            end_x = min(canvas_width1, event.x)
         if event.y < 0:
             end_y = 0
         else:
-            end_y = min(canvas_height, event.y)
+            end_y = min(canvas_height1, event.y)
 
         # "rect1"タグの画像を再描画
         self.canvas1.coords("rect1", start_x, start_y, end_x, end_y)
@@ -255,7 +257,7 @@ class Mainloop(tk.Frame):
             self.canvas2.create_image(
                 #self.canvas_width / 2,       # 画像表示位置(Canvasの中心)
                 #self.canvas_height / 2,
-                canvas_width/2, canvas_height/2, image=self.image_tk2)
+                canvas_width1/2, canvas_height1/2, image=self.image_tk2)
 
         else:
             # show image on canvas1
@@ -304,7 +306,7 @@ if __name__ == "__main__":
 
     root = tk.Tk()
     root.title("Hello World")
-    root.geometry("1060x550")
+    root.geometry("1485x735")
     app = Mainloop(r, master = root)
     app.mainloop()
 
