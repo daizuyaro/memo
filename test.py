@@ -8,6 +8,7 @@ import threading
 import tkinter as tk
 import serial
 import loop
+import tempfile
 
 #command_mes_val = "%EE#R"+ RMD +"1"+"\r"
 command_mes_val = b"%EE#RMD1**\r\n"
@@ -16,12 +17,39 @@ command_analog = b"%EE#RAH1\r\n"
 command_test = b"%EE#INT**\r\n"
 command_zero_set = b"%EE#WZS11**\r\n"
 
+def zero_set_click(value0, value1):
+    if value0 and value1 == 0 and 1:
+        return 0
+    else:
+        with tempfile.NamedTemporaryFile(mode='w+') as tf:
+            tf.write(str(value1))
+            tf.seek(0)
+            #tf = tf.read()
+            return tf
+
+def main(q):
+    # setting for comport
+    while True:
+
+        loop_runout = loop.loop(com, command_mes_val)
+        q.put(loop_runout)
+        value = 0
+
+        #print(zero_set)
+        #if zero_set == 1:
+        #    zero_set = 0
+        #    print("zero_set = 1")
+        #    loop.loop(com, command_zero_set)
+        #else:
+        #    loop_runout = loop.loop(com, command_mes_val)
+        #    q.put(loop_runout)
+
 class Mainloop(tk.Frame):
     def __init__(self, q, master=None):
         super().__init__(master)
         #self.pack()
 
-        button = tk.Button(text='ゼロセット', width=30, command=self.zero_set)
+        button = tk.Button(text='ボタン', width=30, command=lambda: zero_set_click(0, 1))
         button.place(x=5, y=400)
         button.bind('<Button-1>', )
 
@@ -31,15 +59,6 @@ class Mainloop(tk.Frame):
         self.text_pos.place(x=100, y=100)
 
         self.thread()
-
-    def main_loop(q):
-        # setting for comport
-        while True:
-            loop_runout = loop.loop(com, command_mes_val)
-            q.put(loop_runout)
-
-    def zero_set(self):
-        loop.loop(com, command_zero_set)
 
     def ui_update(self, q):
         while True:
@@ -53,9 +72,12 @@ class Mainloop(tk.Frame):
 if __name__ == "__main__":
     # supported between instances of 'type' and 'int'
     q = Queue()
+    r = Queue()
+
     with pool.Pool(processes=1) as p:
+
         #multiprocessing
-        p0 = p.Process(target=Mainloop.main_loop, args=(q, ), daemon=True)
+        p0 = p.Process(target=main, args=(q, ), daemon=True)
         p0.start()
 
     root = tk.Tk()
